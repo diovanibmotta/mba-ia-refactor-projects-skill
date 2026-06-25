@@ -1,88 +1,73 @@
-from flask import Flask, jsonify, request
+import logging
+from flask import Flask, jsonify
 from flask_cors import CORS
-import controllers
+
+from src.config.settings import SECRET_KEY, DEBUG, PORT, HOST
+from src.views.product_routes import product_bp
+from src.views.user_routes import user_bp
+from src.views.order_routes import order_bp
+from src.views.report_routes import report_bp
+from src.middlewares.error_handler import register_error_handlers
 from database import get_db
 
-app = Flask(__name__)
-app.config["SECRET_KEY"] = "minha-chave-super-secreta-123"
-app.config["DEBUG"] = True
-CORS(app)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
-app.add_url_rule("/produtos", "listar_produtos", controllers.listar_produtos, methods=["GET"])
-app.add_url_rule("/produtos/busca", "buscar_produtos", controllers.buscar_produtos, methods=["GET"])
-app.add_url_rule("/produtos/<int:id>", "buscar_produto", controllers.buscar_produto, methods=["GET"])
-app.add_url_rule("/produtos", "criar_produto", controllers.criar_produto, methods=["POST"])
-app.add_url_rule("/produtos/<int:id>", "atualizar_produto", controllers.atualizar_produto, methods=["PUT"])
-app.add_url_rule("/produtos/<int:id>", "deletar_produto", controllers.deletar_produto, methods=["DELETE"])
 
-app.add_url_rule("/usuarios", "listar_usuarios", controllers.listar_usuarios, methods=["GET"])
-app.add_url_rule("/usuarios/<int:id>", "buscar_usuario", controllers.buscar_usuario, methods=["GET"])
-app.add_url_rule("/usuarios", "criar_usuario", controllers.criar_usuario, methods=["POST"])
-app.add_url_rule("/login", "login", controllers.login, methods=["POST"])
+def create_app():
+    app = Flask(__name__)
+    app.config["SECRET_KEY"] = SECRET_KEY
+    app.config["DEBUG"] = DEBUG
 
-app.add_url_rule("/pedidos", "criar_pedido", controllers.criar_pedido, methods=["POST"])
-app.add_url_rule("/pedidos", "listar_todos_pedidos", controllers.listar_todos_pedidos, methods=["GET"])
-app.add_url_rule("/pedidos/usuario/<int:usuario_id>", "listar_pedidos_usuario", controllers.listar_pedidos_usuario, methods=["GET"])
-app.add_url_rule("/pedidos/<int:pedido_id>/status", "atualizar_status_pedido", controllers.atualizar_status_pedido, methods=["PUT"])
+    CORS(app)
 
-app.add_url_rule("/relatorios/vendas", "relatorio_vendas", controllers.relatorio_vendas, methods=["GET"])
+    app.register_blueprint(product_bp)
+    app.register_blueprint(user_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(report_bp)
 
-app.add_url_rule("/health", "health_check", controllers.health_check, methods=["GET"])
+    register_error_handlers(app)
 
-@app.route("/")
-def index():
-    return jsonify({
-        "mensagem": "Bem-vindo à API da Loja",
-        "versao": "1.0.0",
-        "endpoints": {
-            "produtos": "/produtos",
-            "usuarios": "/usuarios",
-            "pedidos": "/pedidos",
-            "login": "/login",
-            "relatorios": "/relatorios/vendas",
-            "health": "/health"
-        }
-    })
+    @app.route("/")
+    def index():
+        return jsonify({
+            "mensagem": "Bem-vindo a API da Loja",
+            "versao": "1.0.0",
+            "endpoints": {
+                "produtos": "/produtos",
+                "usuarios": "/usuarios",
+                "pedidos": "/pedidos",
+                "login": "/login",
+                "relatorios": "/relatorios/vendas",
+                "health": "/health",
+            },
+        })
 
-@app.route("/admin/reset-db", methods=["POST"])
-def reset_database():
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("DELETE FROM itens_pedido")
-    cursor.execute("DELETE FROM pedidos")
-    cursor.execute("DELETE FROM produtos")
-    cursor.execute("DELETE FROM usuarios")
-    db.commit()
-    print("!!! BANCO DE DADOS RESETADO !!!")
-    return jsonify({"mensagem": "Banco de dados resetado", "sucesso": True}), 200
+    @app.route("/health")
+    def health_check():
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("SELECT 1")
+        cursor.execute("SELECT COUNT(*) FROM produtos")
+        produtos = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM usuarios")
+        usuarios = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM pedidos")
+        pedidos = cursor.fetchone()[0]
+        return jsonify({
+            "status": "ok",
+            "database": "connected",
+            "counts": {"produtos": produtos, "usuarios": usuarios, "pedidos": pedidos},
+        }), 200
 
-@app.route("/admin/query", methods=["POST"])
-def executar_query():
-    dados = request.get_json()
-    query = dados.get("sql", "")
-    if not query:
-        return jsonify({"erro": "Query não informada"}), 400
+    return app
 
-    db = get_db()
-    cursor = db.cursor()
-    try:
-        cursor.execute(query)
-        if query.strip().upper().startswith("SELECT"):
-            rows = cursor.fetchall()
-            result = [dict(row) for row in rows]
-            return jsonify({"dados": result, "sucesso": True}), 200
-        else:
-            db.commit()
-            return jsonify({"mensagem": "Query executada", "sucesso": True}), 200
-    except Exception as e:
-        return jsonify({"erro": str(e)}), 500
 
 if __name__ == "__main__":
-
     get_db()
-    print("=" * 50)
-    print("SERVIDOR INICIADO")
-    print("Rodando em http://localhost:5000")
-    print("=" * 50)
-
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app = create_app()
+    import logging as _logging
+    _logging.getLogger().info("Server starting at http://%s:%s", HOST, PORT)
+    app.run(host=HOST, port=PORT, debug=DEBUG)
