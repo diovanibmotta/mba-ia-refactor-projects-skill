@@ -250,7 +250,7 @@ db.run("SELECT * FROM x WHERE id = ?", [id])
 
 ### AP-09: Dead Code and Unused Modules
 
-**Severity**: MEDIUM
+**Severity**: LOW
 **Description**: Service classes, utility functions, or validation methods that are defined but never called. Often appears in partially-organized projects where structure was created but never wired up.
 
 **Detection Signals**:
@@ -314,3 +314,55 @@ db.run("SELECT * FROM x WHERE id = ?", [id])
 - `new Buffer()` → `Buffer.from()`
 - MD5 for passwords → `werkzeug.security` or `bcrypt`
 - Bare `except:` → `except Exception as e:`
+
+---
+
+## LOW Severity
+
+### AP-11: Print-Based Logging Instead of Structured Logger
+
+**Severity**: LOW
+**Description**: Using `print()` (Python) or `console.log()` (Node.js) for application logging instead of a structured logging framework. Provides no log levels, no timestamps, no filtering, and no aggregation.
+
+**Detection Signals**:
+```
+# Python
+"^\s*print\("
+"print\(\"ERRO\|print\(\"LOG\|print\(\"INFO\|print\(\"DEBUG"
+
+# Node.js
+"console\.log\("
+"console\.error\("
+```
+
+**Structural check**: If `import logging` or `const logger = require` is absent from files that contain `print(` or `console.log(`, flag as this pattern.
+
+**Impact**: Cannot filter by severity in production. No structured metadata. Log output mixed with print debugging. Cannot route to log aggregation systems (Datadog, CloudWatch, etc.).
+**Recommendation**: Python → `import logging; logger = logging.getLogger(__name__); logger.info(...)`. Node.js → use `console.error()` for errors at minimum, or add `pino`/`winston`.
+
+---
+
+### AP-12: Magic Numbers and Hardcoded Business Constants
+
+**Severity**: LOW
+**Description**: Numeric or string literals embedded directly in business logic without named constants. The meaning of the value is not self-documenting and changing the value requires a code search.
+
+**Detection Signals**:
+```
+# Python - numeric literals in business conditions
+"\* 0\.[0-9]\|> [0-9]{4}\|>= [0-9]{4}"
+"if.*> 10000\|if.*> 5000\|if.*> 1000"
+
+# Discount rates inline
+"= faturamento \* 0\."
+
+# String literals used as status values without constants
+"== ['\"]pendente['\"]\|== ['\"]aprovado['\"]\|== ['\"]cancelado['\"]"
+"startsWith\(['\"]4['\"]\)"  # Card prefix as magic string
+
+# Single-letter variables in business logic (not loop indices)
+"def.*\(u, e, p, cid, cc\)\|let u =\|let e =\|let p ="
+```
+
+**Impact**: Business rules are invisible to readers. Changing a threshold requires grep-ing for literal values. Bugs introduced when one occurrence is updated but another is missed.
+**Recommendation**: Extract to named constants at module level: `DISCOUNT_HIGH_THRESHOLD = 10000`, `VISA_PREFIX = "4"`, `VALID_STATUSES = ["pendente", "aprovado", "cancelado"]`.
