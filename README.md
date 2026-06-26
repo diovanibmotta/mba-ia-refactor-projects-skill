@@ -20,6 +20,8 @@ Skill Claude Code que automatiza auditoria e refatoração de projetos legados p
 | 8 | Problema N+1 na busca de pedidos | MEDIUM | models.py:171-201,203-233 | 3 níveis de queries aninhadas: O(N*M) ao invés de 1 JOIN |
 | 9 | Construção de dicts de produto duplicada 3 vezes | MEDIUM | models.py:12-21,31-40,303-313 | Mudanças de schema exigem atualizar 3 locais |
 | 10 | Magic numbers nas regras de desconto | LOW | models.py:257-262 | 10000, 5000, 1000, 0.1, 0.05, 0.02 sem constantes nomeadas |
+| 11 | Caminho do banco de dados hardcoded | LOW | database.py:5 | `db_path = "loja.db"` impede trocar DB por ambiente sem alterar código |
+| 12 | Import não utilizado | LOW | models.py:2 | `import sqlite3` nunca usado diretamente — todo acesso via `get_db()` |
 
 **Total encontrado: 40 findings** (7 CRITICAL, 6 HIGH, 11 MEDIUM, 16 LOW)
 
@@ -39,6 +41,8 @@ Skill Claude Code que automatiza auditoria e refatoração de projetos legados p
 | 8 | Dados órfãos ao deletar usuário | HIGH | src/AppManager.js:131-137 | Matrículas e pagamentos ficam sem usuário referenciado (bug admitido no próprio response) |
 | 9 | Nomes de variáveis ilegíveis: `u`, `e`, `p`, `cid`, `cc` | MEDIUM | src/AppManager.js:29-33 | Manutenção exige decifrar o código a cada leitura |
 | 10 | `cc.startsWith("4")` como lógica de aprovação de pagamento | MEDIUM | src/AppManager.js:46 | Magic string sem documentação. Negócio invisível no código |
+| 11 | `self = this` — padrão legado pré-ES6 desnecessário | LOW | src/AppManager.js:26 | Workaround de binding substituível por arrow functions ou async/await |
+| 12 | Variável `totalRevenue` exportada mas nunca lida nem modificada | LOW | src/utils.js:10,25 | Dead export — ruído no módulo, nunca consumido em lugar algum |
 
 **Total encontrado: 31 findings** (4 CRITICAL, 6 HIGH, 9 MEDIUM, 12 LOW)
 
@@ -58,6 +62,8 @@ Skill Claude Code que automatiza auditoria e refatoração de projetos legados p
 | 8 | Sem camada de controllers — toda lógica nas routes | HIGH | routes/*.py | Routes com 50-100 linhas por handler. Lógica não testável sem HTTP |
 | 9 | Problema N+1 no GET /tasks | MEDIUM | task_routes.py:40-55 | User.query.get() e Category.query.get() dentro de loop |
 | 10 | `datetime.utcnow()` deprecado desde Python 3.12 em 10+ locais | MEDIUM | models/*.py, routes/*.py | Emite DeprecationWarning, quebrará em versões futuras |
+| 11 | Erro de indentação em `Task.is_overdue()` — método sintaticamente incorreto | LOW | models/task.py:52-53 | `if` do status no mesmo nível que `if` da data; condição nunca avaliada em conjunto |
+| 12 | Token JWT falso retornado no login | LOW | routes/user_routes.py:210 | `'fake-jwt-token-' + str(user.id)` — qualquer um pode forjar token sem autenticar |
 
 **Total encontrado: 38 findings** (4 CRITICAL, 7 HIGH, 10 MEDIUM, 17 LOW)
 
