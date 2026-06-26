@@ -21,7 +21,7 @@ def list_users():
 
 
 def get_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return None, "Usuário não encontrado", 404
     data = user.to_dict()
@@ -59,7 +59,7 @@ def create_user(name, email, password, role='user'):
 
 
 def update_user(user_id, data):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return None, "Usuário não encontrado", 404
 
@@ -92,7 +92,7 @@ def update_user(user_id, data):
 
 
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return False, "Usuário não encontrado", 404
 
@@ -105,7 +105,7 @@ def delete_user(user_id):
 
 
 def get_user_tasks(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return None, "Usuário não encontrado", 404
     tasks = Task.query.filter_by(user_id=user_id).all()

@@ -16,7 +16,7 @@ def list_tasks():
 
 
 def get_task(task_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         return None, "Task não encontrada", 404
     return task.to_dict(), None, 200
@@ -29,14 +29,14 @@ def create_task(title, description, status, priority, user_id, category_id, due_
     task = Task()
     task.title = title.strip()
 
-    if not task.validate_status.__func__(task, status):
+    if not task.validate_status(status):
         return None, "Status inválido", 400
-    if not task.validate_priority.__func__(task, priority):
+    if not task.validate_priority(priority):
         return None, "Prioridade deve ser entre 1 e 5", 400
 
-    if user_id and not User.query.get(user_id):
+    if user_id and not db.session.get(User, user_id):
         return None, "Usuário não encontrado", 404
-    if category_id and not Category.query.get(category_id):
+    if category_id and not db.session.get(Category, category_id):
         return None, "Categoria não encontrada", 404
 
     task.description = description
@@ -61,7 +61,7 @@ def create_task(title, description, status, priority, user_id, category_id, due_
 
 
 def update_task(task_id, data):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         return None, "Task não encontrada", 404
 
@@ -85,12 +85,12 @@ def update_task(task_id, data):
         task.priority = data['priority']
 
     if 'user_id' in data:
-        if data['user_id'] and not User.query.get(data['user_id']):
+        if data['user_id'] and not db.session.get(User, data['user_id']):
             return None, "Usuário não encontrado", 404
         task.user_id = data['user_id']
 
     if 'category_id' in data:
-        if data['category_id'] and not Category.query.get(data['category_id']):
+        if data['category_id'] and not db.session.get(Category, data['category_id']):
             return None, "Categoria não encontrada", 404
         task.category_id = data['category_id']
 
@@ -112,7 +112,7 @@ def update_task(task_id, data):
 
 
 def delete_task(task_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         return False, "Task não encontrada", 404
     db.session.delete(task)

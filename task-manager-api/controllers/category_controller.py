@@ -30,7 +30,7 @@ def create_category(name, description='', color='#000000'):
 
 
 def update_category(cat_id, data):
-    cat = Category.query.get(cat_id)
+    cat = db.session.get(Category, cat_id)
     if not cat:
         return None, "Categoria não encontrada", 404
     if not data:
@@ -46,7 +46,7 @@ def update_category(cat_id, data):
 
 
 def delete_category(cat_id):
-    cat = Category.query.get(cat_id)
+    cat = db.session.get(Category, cat_id)
     if not cat:
         return False, "Categoria não encontrada", 404
     db.session.delete(cat)
